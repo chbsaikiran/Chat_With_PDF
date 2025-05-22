@@ -283,7 +283,7 @@ def search_stored_documents(query):
         return [f"ERROR: Failed to search: {str(e)}"]
 
 def main():
-    query = "what are the energy efficient practices for DLF?? list top 5 practices"
+    query = "tell me about physical impact of climate change ??"
     results = search_stored_documents(query)
     prompt = f"""
     You are a helpful assistant that can answer questions about the documents in the following list:

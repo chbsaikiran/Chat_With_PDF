@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Chat Assistant</title>
+    <!-- Add marked.js for markdown support -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f0f2f5;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-container {
+            max-width: 1000px;
+            margin: 20px auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            padding: 20px;
+            background: #007bff;
+            color: white;
+            text-align: center;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .message {
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .message.user {
+            align-items: flex-end;
+        }
+
+        .message.assistant {
+            align-items: flex-start;
+        }
+
+        .message-content {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            margin: 4px 0;
+        }
+
+        .user .message-content {
+            background: #007bff;
+            color: white;
+        }
+
+        .assistant .message-content {
+            background: #e9ecef;
+            color: #212529;
+        }
+
+        /* Markdown styling */
+        .assistant .message-content {
+            line-height: 1.6;
+        }
+
+        .assistant .message-content p {
+            margin-bottom: 1em;
+        }
+
+        .assistant .message-content ul, 
+        .assistant .message-content ol {
+            margin: 1em 0;
+            padding-left: 2em;
+        }
+
+        .assistant .message-content li {
+            margin: 0.5em 0;
+        }
+
+        .assistant .message-content h1,
+        .assistant .message-content h2,
+        .assistant .message-content h3,
+        .assistant .message-content h4 {
+            margin: 1em 0 0.5em 0;
+        }
+
+        .assistant .message-content code {
+            background: #f8f9fa;
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+
+        .assistant .message-content pre {
+            background: #f8f9fa;
+            padding: 1em;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 1em 0;
+        }
+
+        .timestamp {
+            font-size: 0.8em;
+            color: #6c757d;
+            margin-top: 4px;
+        }
+
+        .chat-input {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #dee2e6;
+            display: flex;
+            gap: 10px;
+        }
+
+        #message-input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            font-size: 1em;
+            outline: none;
+        }
+
+        #message-input:focus {
+            border-color: #007bff;
+        }
+
+        #send-button {
+            padding: 12px 24px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background 0.2s;
+        }
+
+        #send-button:hover {
+            background: #0056b3;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 10px;
+            color: #6c757d;
+        }
+
+        .loading.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <h1>Document Chat Assistant</h1>
+        </div>
+        <div class="chat-messages" id="chat-messages">
+            <!-- Messages will be added here -->
+        </div>
+        <div class="loading" id="loading">Assistant is typing...</div>
+        <div class="chat-input">
+            <input type="text" id="message-input" placeholder="Type your question here..." autocomplete="off">
+            <button id="send-button">Send</button>
+        </div>
+    </div>
+
+    <script>
+        const messageInput = document.getElementById('message-input');
+        const sendButton = document.getElementById('send-button');
+        const chatMessages = document.getElementById('chat-messages');
+        const loading = document.getElementById('loading');
+
+        // Configure marked options
+        marked.setOptions({
+            breaks: true,  // Convert line breaks to <br>
+            gfm: true,     // GitHub Flavored Markdown
+            headerIds: false,
+            mangle: false
+        });
+
+        function addMessage(query, response, timestamp) {
+            // Add user message
+            const userMessage = document.createElement('div');
+            userMessage.className = 'message user';
+            userMessage.innerHTML = `
+                <div class="message-content">${query}</div>
+                <div class="timestamp">${timestamp}</div>
+            `;
+            chatMessages.appendChild(userMessage);
+
+            // Add assistant message with markdown rendering
+            const assistantMessage = document.createElement('div');
+            assistantMessage.className = 'message assistant';
+            assistantMessage.innerHTML = `
+                <div class="message-content">${marked.parse(response)}</div>
+                <div class="timestamp">${timestamp}</div>
+            `;
+            chatMessages.appendChild(assistantMessage);
+
+            // Scroll to bottom
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const query = messageInput.value.trim();
+            if (!query) return;
+
+            // Clear input
+            messageInput.value = '';
+
+            // Show loading
+            loading.classList.add('active');
+
+            try {
+                const response = await fetch('http://localhost:5000/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ query }),
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    addMessage(data.query, data.response, data.timestamp);
+                } else {
+                    addMessage(query, `Error: ${data.error}`, new Date().toLocaleString());
+                }
+            } catch (error) {
+                addMessage(query, `Error: ${error.message}`, new Date().toLocaleString());
+            } finally {
+                loading.classList.remove('active');
+            }
+        }
+
+        // Event listeners
+        sendButton.addEventListener('click', sendMessage);
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html> 

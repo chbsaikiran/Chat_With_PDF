@@ -9,4 +9,6 @@ pymupdf4llm==0.0.24
 PyMuPDF>=1.23.0
 tqdm>=4.66.1
 lxml>=4.9.0
-lxml_html_clean>=0.1.0 
+lxml_html_clean>=0.1.0
+flask>=2.0.0
+flask-cors>=3.0.0 
