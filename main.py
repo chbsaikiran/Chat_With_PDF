@@ -273,7 +273,7 @@ def search_stored_documents(query):
         index = faiss.read_index(str(ROOT / "faiss_index" / "index.bin"))
         metadata = json.loads((ROOT / "faiss_index" / "metadata.json").read_text())
         query_vec = get_embedding(query ).reshape(1, -1)
-        D, I = index.search(query_vec, k=1)
+        D, I = index.search(query_vec, k=5)
         results = []
         for idx in I[0]:
             data = metadata[idx]
@@ -283,8 +283,16 @@ def search_stored_documents(query):
         return [f"ERROR: Failed to search: {str(e)}"]
 
 def main():
-    results = search_stored_documents("what is the bribery rules for DLF ??")
-    print(results)
+    query = "what are the energy efficient practices for DLF?? list top 5 practices"
+    results = search_stored_documents(query)
+    prompt = f"""
+    You are a helpful assistant that can answer questions about the documents in the following list:
+    {results}
+    Please answer the following question: {query}
+    """
+    response = model.generate_content(prompt)
+    reply = response.text.strip()
+    print(reply)
 
 if __name__ == "__main__":
     main()
